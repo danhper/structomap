@@ -1,6 +1,8 @@
 # Go serializer [![Build Status](https://travis-ci.org/tuvistavie/serializer.svg)](https://travis-ci.org/tuvistavie/serializer) [![GoDoc](https://godoc.org/github.com/tuvistavie/serializer?status.svg)](https://godoc.org/github.com/tuvistavie/serializer)
 
-Serialize your `struct` easily.
+This package helps you to serialize your `struct` easily. It provides a `Serializer` type which contains chainable function to add, remove or modify
+fields of the serialized structs.
+The result is returned as a `map[string]interface{}`
 
 Here is an example.
 
@@ -31,3 +33,5 @@ serializer.New(user).
            Result()
 // -> {"ID": 1, "FirstName": "Foo", "LastName": "Bar", "CurrentTime": time.Time{...}, "FullName": "Foo Bar"}
 ```
+
+The full documentation is available at https://godoc.org/github.com/tuvistavie/serializer.
