@@ -27,7 +27,7 @@ func New(entity interface{}) *Serializer {
 }
 
 // Returns the result of the serialization as a map[string]interface{}
-func (s *Serializer) Result() jsonMap {
+func (s *Serializer) Result() map[string]interface{} {
 	result := make(map[string]interface{})
 	for _, modifier := range s.modifiers {
 		result = modifier(result)
