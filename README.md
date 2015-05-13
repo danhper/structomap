@@ -34,3 +34,29 @@ serializer.New(user).
 ```
 
 The full documentation is available at https://godoc.org/github.com/tuvistavie/serializer.
+
+## Building your own serializer
+
+With `Serializer` as a base, you can easily build your serializer.
+
+```go
+type UserSerializer struct {
+  *serializer.Serializer
+}
+
+func NewUserSerializer(user User) *UserSerializer {
+  u := &UserSerializer{serializer.New(user)}
+  u.Pick("ID", "CreatedAt", "UpdatedAt", "DeletedAt")
+  return u
+}
+
+func (u *UserSerializer) WithPrivateInfo() *UserSerializer {
+  u.Pick("Email")
+  return u
+}
+
+userMap := NewUserSerializer(user).WithPrivateInfo.Result()
+```
+
+Note that the `u.Pick`, and all other methods do modify the serializer, they do not return a new serializer each time. This is why it works
+even when ignoring `u.Pick` return value.
