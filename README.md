@@ -1,10 +1,10 @@
-# GO serializer
+# Go serializer [![Build Status](https://travis-ci.org/tuvistavie/serializer.svg)](https://travis-ci.org/tuvistavie/serializer) [![GoDoc](https://godoc.org/github.com/tuvistavie/serializer?status.svg)](https://godoc.org/github.com/tuvistavie/serializer)
 
 Serialize your `struct` easily.
 
 Here is an example.
 
-```
+```go
 import "github.com/tuvistavie/serializer"
 
 type User struct {
