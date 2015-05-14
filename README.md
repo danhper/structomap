@@ -21,6 +21,7 @@ type User struct {
 user := &User{"ID": 1, "FirstName": "Foo", "LastName": "Bar", "Email": "foo@example.org", "HideEmail": true}
 
 serializer.New(user).
+           UseSnakeCase().
            Pick("ID", "FirstName", "LastName", "Email").
            OmitIf(func(u interface{}) bool {
                return u.(User).HideEmail
@@ -30,7 +31,7 @@ serializer.New(user).
                return u.(User).FirstName + " " + u.(User).LastName
            }).
            Result()
-// -> {"ID": 1, "FirstName": "Foo", "LastName": "Bar", "CurrentTime": time.Time{...}, "FullName": "Foo Bar"}
+// -> {"id": 1, "first_name": "Foo", "last_name": "Bar", "current_time": time.Time{...}, "full_name": "Foo Bar"}
 ```
 
 The full documentation is available at https://godoc.org/github.com/tuvistavie/serializer.

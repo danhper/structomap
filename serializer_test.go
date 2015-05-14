@@ -173,6 +173,35 @@ func TestConvertIf(t *testing.T) {
 	assert.NotContains(t, m, "FirstName")
 }
 
+func TestTransformKeys(t *testing.T) {
+	m := New(user).PickAll().TransformKeys(func(s string) string {
+		return "dummy_" + s
+	}).Result()
+	assert.Contains(t, m, "dummy_ID")
+	assert.Contains(t, m, "dummy_FirstName")
+	assert.NotContains(t, m, "ID")
+}
+
+func TestUseSnakeCase(t *testing.T) {
+	m := New(user).UseSnakeCase().PickAll().Result()
+	assert.Contains(t, m, "id")
+	assert.Contains(t, m, "first_name")
+	assert.NotContains(t, m, "FirstName")
+}
+
+func TestUseCamelCase(t *testing.T) {
+	m := New(user).UseCamelCase().PickAll().Result()
+	assert.Contains(t, m, "id")
+	assert.Contains(t, m, "firstName")
+	assert.NotContains(t, m, "FirstName")
+}
+
+func TestUsePascalCase(t *testing.T) {
+	m := New(user).UsePascalCase().PickAll().Result()
+	assert.Contains(t, m, "ID")
+	assert.Contains(t, m, "FirstName")
+}
+
 func TestCustomSerializer(t *testing.T) {
 	m := NewCustomSerializer(user).WithPrivateinfo().WithBasicInfo().Result()
 	for _, field := range []string{"ID", "FirstName", "LastName", "Email"} {

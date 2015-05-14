@@ -1,3 +1,7 @@
+# 0.2.1 / 2015-05-15
+
+* Add support for `snake_case` and `camelCase`
+
 # 0.2.0 / 2015-05-14
 
 * Make `serializer.Serializer` an interface
