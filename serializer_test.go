@@ -202,6 +202,18 @@ func TestUsePascalCase(t *testing.T) {
 	assert.Contains(t, m, "FirstName")
 }
 
+func TestDefaultCase(t *testing.T) {
+	SetDefaultCase(SnakeCase)
+	m := New(user).PickAll().Result()
+	assert.Contains(t, m, "first_name")
+	SetDefaultCase(CamelCase)
+	m = New(user).PickAll().Result()
+	assert.Contains(t, m, "firstName")
+	SetDefaultCase(PascalCase)
+	m = New(user).PickAll().Result()
+	assert.Contains(t, m, "FirstName")
+}
+
 func TestCustomSerializer(t *testing.T) {
 	m := NewCustomSerializer(user).WithPrivateinfo().WithBasicInfo().Result()
 	for _, field := range []string{"ID", "FirstName", "LastName", "Email"} {

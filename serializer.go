@@ -7,6 +7,23 @@ import (
 	"reflect"
 )
 
+type KeyCase int
+
+const (
+	NotSet     KeyCase = iota
+	CamelCase          = iota
+	PascalCase         = iota
+	SnakeCase          = iota
+)
+
+var defaultCase KeyCase = NotSet
+
+// Set the default key case (snake_case, camelCase or PascalCase) for
+// all new serializers
+func SetDefaultCase(caseType KeyCase) {
+	defaultCase = caseType
+}
+
 type mapModifier func(jsonMap) jsonMap
 
 type jsonMap map[string]interface{}
@@ -74,9 +91,24 @@ type Base struct {
 
 // Creates a new serializer
 func New(entity interface{}) *Base {
-	return &Base{
+	b := &Base{
 		raw:       entity,
 		reflected: reflect.Indirect(reflect.ValueOf(entity)),
+	}
+	b.addDefaultKeyConverter()
+	return b
+}
+
+func (b *Base) addDefaultKeyConverter() {
+	switch defaultCase {
+	case PascalCase:
+		b.UsePascalCase()
+	case SnakeCase:
+		b.UseSnakeCase()
+	case CamelCase:
+		b.UseCamelCase()
+	default:
+		break
 	}
 }
 

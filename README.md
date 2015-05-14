@@ -36,6 +36,12 @@ serializer.New(user).
 
 The full documentation is available at https://godoc.org/github.com/tuvistavie/serializer.
 
+## Choosing a key format
+
+You can set the key format for the output map using `UseSnakeCase()`, `UsePascalCase()` or `UseCamelCase()` on the serializer object.
+You can also set the default case for all new serializers by using
+`serializer.SetDefaultCase(serializer.SnakeCase)` (`serializer.CamelCase` and `serializer.PascalCase` are also available). The `init()` function would be a good place to set this.
+
 ## Building your own serializer
 
 With `Serializer` as a base, you can easily build your serializer.
