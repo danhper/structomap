@@ -9,6 +9,7 @@ import (
 
 type User struct {
 	ID        int
+	Email     string
 	Birthday  time.Time
 	Age       int
 	FirstName string
@@ -21,6 +22,24 @@ type User struct {
 
 	BillingAddressID int
 	IgnoreMe         int
+}
+
+type CustomSerializer struct {
+	*Base
+}
+
+func NewCustomSerializer(entity interface{}) *CustomSerializer {
+	return &CustomSerializer{Base: New(entity)}
+}
+
+func (c *CustomSerializer) WithBasicInfo() *CustomSerializer {
+	c.Pick("ID", "FirstName", "LastName")
+	return c
+}
+
+func (c *CustomSerializer) WithPrivateinfo() *CustomSerializer {
+	c.Pick("Email")
+	return c
 }
 
 var user = User{
@@ -152,4 +171,11 @@ func TestConvertIf(t *testing.T) {
 		return strings.ToLower(s.(string))
 	}).Result()
 	assert.NotContains(t, m, "FirstName")
+}
+
+func TestCustomSerializer(t *testing.T) {
+	m := NewCustomSerializer(user).WithPrivateinfo().WithBasicInfo().Result()
+	for _, field := range []string{"ID", "FirstName", "LastName", "Email"} {
+		assert.Contains(t, m, field)
+	}
 }

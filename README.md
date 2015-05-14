@@ -1,6 +1,6 @@
 # Go serializer [![Build Status](https://travis-ci.org/tuvistavie/serializer.svg)](https://travis-ci.org/tuvistavie/serializer) [![GoDoc](https://godoc.org/github.com/tuvistavie/serializer?status.svg)](https://godoc.org/github.com/tuvistavie/serializer)
 
-This package helps you to serialize your `struct` into `map` easily. It provides a `Serializer` type which contains chainable function to add, remove or modify fields. The result is returned as a `map[string]interface{}`.
+This package helps you to serialize your `struct` into `map` easily. It provides a `serializer.Serializer` interface implemented by the `serializer.Base` type which contains chainable function to add, remove or modify fields. The result is returned as a `map[string]interface{}`.
 It is then up to you to encode the result in JSON, XML or whatever you like.
 
 Here is an example.
@@ -41,7 +41,7 @@ With `Serializer` as a base, you can easily build your serializer.
 
 ```go
 type UserSerializer struct {
-  *serializer.Serializer
+  *serializer.Base
 }
 
 func NewUserSerializer(user User) *UserSerializer {
@@ -55,7 +55,7 @@ func (u *UserSerializer) WithPrivateInfo() *UserSerializer {
   return u
 }
 
-userMap := NewUserSerializer(user).WithPrivateInfo.Result()
+userMap := NewUserSerializer(user).WithPrivateInfo().Result()
 ```
 
 Note that the `u.Pick`, and all other methods do modify the serializer, they do not return a new serializer each time. This is why it works
