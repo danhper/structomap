@@ -1,3 +1,8 @@
+# 0.4.0 / 2015-05-15
+
+* Change `Result` method to `Transform` method.
+* Improve reusability of serializers.
+
 # 0.3.0 / 2015-05-15
 
 * Replace `Convert` by `PickFunc` and `ConvertIf` by `PickFuncIf`.

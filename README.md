@@ -1,6 +1,6 @@
 # Go serializer [![Build Status](https://travis-ci.org/tuvistavie/serializer.svg)](https://travis-ci.org/tuvistavie/serializer) [![GoDoc](https://godoc.org/github.com/tuvistavie/serializer?status.svg)](https://godoc.org/github.com/tuvistavie/serializer)
 
-This package helps you to serialize your `struct` into `map` easily. It provides a `serializer.Serializer` interface implemented by the `serializer.Base` type which contains chainable function to add, remove or modify fields. The result is returned as a `map[string]interface{}`.
+This package helps you to serialize your `struct` into `map` easily. It provides a `serializer.Serializer` interface implemented by the `serializer.Base` type which contains chainable function to add, remove or modify fields. The `struct` is trasnformed to a `map[string]interface{}` using the `Transform(entity interface{})` method.
 It is then up to you to encode the result in JSON, XML or whatever you like.
 
 Here is an example.
@@ -24,7 +24,7 @@ user := User{
     ID: 1, Email: "x@example.com", FirstName: "Foo", LastName:  "Bar",
     HideEmail: true, CreatedAt: currentTime, UpdatedAt: currentTime,
 }
-userMap := serializer.New(user).
+userSerializer := serializer.New().
               UseSnakeCase().
               Pick("ID", "FirstName", "LastName", "Email").
               PickFunc(func(t interface{}) interface{} {
@@ -36,7 +36,9 @@ userMap := serializer.New(user).
               Add("CurrentTime", time.Date(2015, 5, 15, 17, 41, 0, 0, time.UTC)).
               AddFunc("FullName", func(u interface{}) interface{} {
                   return u.(User).FirstName + " " + u.(User).LastName
-              }).Result()
+              })
+
+userMap := userSerializer.Transform(user)
 str, _ := json.MarshalIndent(userMap, "", "  ")
 fmt.Println(string(str))
 ```
@@ -72,8 +74,8 @@ type UserSerializer struct {
   *serializer.Base
 }
 
-func NewUserSerializer(user User) *UserSerializer {
-  u := &UserSerializer{serializer.New(user)}
+func NewUserSerializer() *UserSerializer {
+  u := &UserSerializer{serializer.New()}
   u.Pick("ID", "CreatedAt", "UpdatedAt", "DeletedAt")
   return u
 }
@@ -83,7 +85,7 @@ func (u *UserSerializer) WithPrivateInfo() *UserSerializer {
   return u
 }
 
-userMap := NewUserSerializer(user).WithPrivateInfo().Result()
+userMap := NewUserSerializer().WithPrivateInfo().Transform(user)
 ```
 
 Note that the `u.Pick`, and all other methods do modify the serializer, they do not return a new serializer each time. This is why it works

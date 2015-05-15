@@ -32,11 +32,14 @@ type KeyConverter func(string) string
 type ValueConverter func(interface{}) interface{}
 
 type Serializer interface {
-	// Returns the result of the serialization as a map[string]interface{}
-	Result() map[string]interface{}
+	// Transform the entity into a map[string]interface{} ready to be serialized
+	Transform(entity interface{}) map[string]interface{}
 
-	// Transform all the keys using the given converter
-	TransformKeys(keyConverter KeyConverter) Serializer
+	// Transform the entities into a map[string]interface{} array ready to be serialized
+	TransformArray(entities []interface{}) []map[string]interface{}
+
+	// Convert all the keys using the given converter
+	ConvertKeys(keyConverter KeyConverter) Serializer
 
 	// Use snake_case keys
 	UseSnakeCase() Serializer
@@ -81,6 +84,18 @@ type Serializer interface {
 	AddFuncIf(predicate Predicate, key string, converter ValueConverter) Serializer
 }
 
+func alwaysTrue(u interface{}) bool {
+	return true
+}
+
+func alwaysFalse(u interface{}) bool {
+	return false
+}
+
+func identity(u interface{}) interface{} {
+	return u
+}
+
 // A basic implementation of Serializer
 type Base struct {
 	raw          interface{}
@@ -90,13 +105,24 @@ type Base struct {
 }
 
 // Creates a new serializer
-func New(entity interface{}) *Base {
-	b := &Base{
-		raw:       entity,
-		reflected: reflect.Indirect(reflect.ValueOf(entity)),
-	}
+func New() *Base {
+	b := &Base{}
 	b.addDefaultKeyConverter()
 	return b
+}
+
+func (b *Base) Transform(entity interface{}) map[string]interface{} {
+	b.raw = entity
+	b.reflected = reflect.Indirect(reflect.ValueOf(entity))
+	return b.result()
+}
+
+func (b *Base) TransformArray(entities []interface{}) []map[string]interface{} {
+	var result []map[string]interface{}
+	for _, entity := range entities {
+		result = append(result, b.Transform(entity))
+	}
+	return result
 }
 
 func (b *Base) addDefaultKeyConverter() {
@@ -120,7 +146,7 @@ func (b *Base) transformedResult(result jsonMap) jsonMap {
 	return newResult
 }
 
-func (b *Base) Result() map[string]interface{} {
+func (b *Base) result() map[string]interface{} {
 	result := make(map[string]interface{})
 	for _, modifier := range b.modifiers {
 		result = modifier(result)
@@ -132,25 +158,25 @@ func (b *Base) Result() map[string]interface{} {
 	}
 }
 
-func (b *Base) TransformKeys(keyConverter KeyConverter) Serializer {
+func (b *Base) ConvertKeys(keyConverter KeyConverter) Serializer {
 	b.keyConverter = keyConverter
 	return b
 }
 
 func (b *Base) UsePascalCase() Serializer {
-	return b.TransformKeys(func(k string) string {
+	return b.ConvertKeys(func(k string) string {
 		return xstrings.ToCamelCase(k)
 	})
 }
 
 func (b *Base) UseCamelCase() Serializer {
-	return b.TransformKeys(func(k string) string {
+	return b.ConvertKeys(func(k string) string {
 		return xstrings.FirstRuneToLower(xstrings.ToCamelCase(xstrings.ToSnakeCase(k)))
 	})
 }
 
 func (b *Base) UseSnakeCase() Serializer {
-	return b.TransformKeys(xstrings.ToSnakeCase)
+	return b.ConvertKeys(xstrings.ToSnakeCase)
 }
 
 func (b *Base) PickAll() Serializer {
@@ -161,82 +187,63 @@ func (b *Base) PickAll() Serializer {
 }
 
 func (b *Base) Pick(keys ...string) Serializer {
-	b.modifiers = append(b.modifiers, func(m jsonMap) jsonMap {
-		for _, key := range keys {
-			m[key] = b.reflected.FieldByName(key).Interface()
-		}
-		return m
-	})
-	return b
+	return b.PickFunc(identity, keys...)
 }
 
 func (b *Base) PickIf(p Predicate, keys ...string) Serializer {
-	if p(b.raw) {
-		return b.Pick(keys...)
-	}
-	return b
+	return b.PickFuncIf(p, identity, keys...)
 }
 
 func (b *Base) PickFunc(converter ValueConverter, keys ...string) Serializer {
-	b.modifiers = append(b.modifiers, func(m jsonMap) jsonMap {
-		for _, key := range keys {
-			m[key] = converter(b.reflected.FieldByName(key).Interface())
-		}
-		return m
-	})
-	return b
+	return b.PickFuncIf(alwaysTrue, converter, keys...)
 }
 
 func (b *Base) PickFuncIf(p Predicate, converter ValueConverter, keys ...string) Serializer {
-	if p(b.raw) {
-		return b.PickFunc(converter, keys...)
-	}
+	b.modifiers = append(b.modifiers, func(m jsonMap) jsonMap {
+		if p(b.raw) {
+			for _, key := range keys {
+				m[key] = converter(b.reflected.FieldByName(key).Interface())
+			}
+		}
+		return m
+	})
 	return b
 }
 
 func (b *Base) Omit(keys ...string) Serializer {
+	return b.OmitIf(alwaysTrue, keys...)
+}
+
+func (b *Base) OmitIf(p Predicate, keys ...string) Serializer {
 	b.modifiers = append(b.modifiers, func(m jsonMap) jsonMap {
-		for _, key := range keys {
-			delete(m, key)
+		if p(b.raw) {
+			for _, key := range keys {
+				delete(m, key)
+			}
 		}
 		return m
 	})
 	return b
 }
 
-func (b *Base) OmitIf(p Predicate, keys ...string) Serializer {
-	if p(b.raw) {
-		return b.Omit(keys...)
-	}
-	return b
-}
-
 func (b *Base) Add(key string, value interface{}) Serializer {
-	b.modifiers = append(b.modifiers, func(m jsonMap) jsonMap {
-		m[key] = value
-		return m
-	})
-	return b
+	return b.AddIf(alwaysTrue, key, value)
 }
 
 func (b *Base) AddIf(p Predicate, key string, value interface{}) Serializer {
-	if p(b.raw) {
-		return b.Add(key, value)
-	}
-	return b
+	return b.AddFuncIf(p, key, func(m interface{}) interface{} { return value })
 }
 
 func (b *Base) AddFunc(key string, f ValueConverter) Serializer {
-	b.modifiers = append(b.modifiers, func(m jsonMap) jsonMap {
-		m[key] = f(b.raw)
-		return m
-	})
-	return b
+	return b.AddFuncIf(alwaysTrue, key, f)
 }
 
 func (b *Base) AddFuncIf(p Predicate, key string, f ValueConverter) Serializer {
-	if p(b.raw) {
-		return b.AddFunc(key, f)
-	}
+	b.modifiers = append(b.modifiers, func(m jsonMap) jsonMap {
+		if p(b.raw) {
+			m[key] = f(b.raw)
+		}
+		return m
+	})
 	return b
 }
