@@ -1,27 +1,36 @@
 package serializer
 
 import (
+	"encoding/json"
+	"fmt"
 	"github.com/tuvistavie/testify/assert"
-	"strings"
 	"testing"
 	"time"
 )
+
+func alwaysTrue(u interface{}) bool {
+	return true
+}
+
+func alwaysFalse(u interface{}) bool {
+	return false
+}
+
+func identity(u interface{}) interface{} {
+	return u
+}
 
 type User struct {
 	ID        int
 	Email     string
 	Birthday  time.Time
 	Age       int
+	HideEmail bool
 	FirstName string
 	LastName  string
-	Num       int
 	HideName  bool
 	CreatedAt time.Time
 	UpdatedAt time.Time
-	DeletedAt *time.Time
-
-	BillingAddressID int
-	IgnoreMe         int
 }
 
 type CustomSerializer struct {
@@ -44,15 +53,43 @@ func (c *CustomSerializer) WithPrivateinfo() *CustomSerializer {
 
 var user = User{
 	ID:        1,
+	Email:     "x@example.com",
 	Birthday:  time.Date(1989, 11, 24, 0, 0, 0, 0, time.UTC),
 	Age:       25,
 	FirstName: "Foo",
 	LastName:  "Bar",
-	Num:       8,
+	HideEmail: true,
 	HideName:  true,
 	CreatedAt: time.Date(2015, 05, 13, 15, 30, 0, 0, time.UTC),
 	UpdatedAt: time.Date(2015, 05, 13, 15, 30, 0, 0, time.UTC),
-	DeletedAt: nil,
+}
+
+func ExampleSerializer() {
+	userMap := New(user).
+		UseSnakeCase().
+		Pick("ID", "FirstName", "LastName", "Email").
+		PickFunc(func(t interface{}) interface{} {
+		return t.(time.Time).Format(time.RFC3339)
+	}, "CreatedAt", "UpdatedAt").
+		OmitIf(func(u interface{}) bool {
+		return u.(User).HideEmail
+	}, "Email").
+		Add("CurrentTime", time.Date(2015, 5, 15, 17, 41, 0, 0, time.UTC)).
+		AddFunc("FullName", func(u interface{}) interface{} {
+		return u.(User).FirstName + " " + u.(User).LastName
+	}).Result()
+	str, _ := json.MarshalIndent(userMap, "", "  ")
+	fmt.Println(string(str))
+	// Output:
+	// {
+	//   "created_at": "2015-05-13T15:30:00Z",
+	//   "current_time": "2015-05-15T17:41:00Z",
+	//   "first_name": "Foo",
+	//   "full_name": "Foo Bar",
+	//   "id": 1,
+	//   "last_name": "Bar",
+	//   "updated_at": "2015-05-13T15:30:00Z"
+	// }
 }
 
 func TestPickAll(t *testing.T) {
@@ -60,7 +97,6 @@ func TestPickAll(t *testing.T) {
 	assert.Contains(t, m, "ID")
 	assert.Contains(t, m, "Age")
 	assert.Contains(t, m, "FirstName")
-	assert.Contains(t, m, "Num")
 }
 
 func TestPick(t *testing.T) {
@@ -68,7 +104,6 @@ func TestPick(t *testing.T) {
 	assert.Contains(t, m, "ID")
 	assert.Contains(t, m, "Age")
 	assert.NotContains(t, m, "FirstName")
-	assert.NotContains(t, m, "Num")
 	m = New(user).Pick("ID").Pick("Age").Result()
 	assert.Contains(t, m, "ID")
 	assert.Contains(t, m, "Age")
@@ -76,15 +111,32 @@ func TestPick(t *testing.T) {
 }
 
 func TestPickIf(t *testing.T) {
-	m := New(user).PickIf(func(u interface{}) bool {
-		return true
-	}, "ID", "FirstName").PickIf(func(u interface{}) bool {
-		return false
-	}, "Email").Result()
+	m := New(user).
+		PickIf(alwaysTrue, "ID", "FirstName").
+		PickIf(alwaysFalse, "Email").Result()
 	assert.Contains(t, m, "ID")
 	assert.Contains(t, m, "FirstName")
 	assert.NotContains(t, m, "Email")
 	assert.NotContains(t, m, "Age")
+}
+
+func TestPickFunc(t *testing.T) {
+	m := New(user).PickFunc(func(t interface{}) interface{} {
+		return t.(time.Time).Format(time.RFC3339)
+	}, "CreatedAt", "UpdatedAt").Result()
+	assert.Contains(t, m, "CreatedAt")
+	assert.Contains(t, m, "UpdatedAt")
+	assert.Equal(t, m["CreatedAt"], user.CreatedAt.Format(time.RFC3339))
+}
+
+func TestPickFuncIf(t *testing.T) {
+	m := New(user).PickFuncIf(alwaysTrue, func(t interface{}) interface{} {
+		return t.(time.Time).Format(time.RFC3339)
+	}, "CreatedAt", "UpdatedAt").PickFuncIf(alwaysFalse, identity, "Email").Result()
+	assert.Contains(t, m, "CreatedAt")
+	assert.Contains(t, m, "UpdatedAt")
+	assert.NotContains(t, m, "Email")
+	assert.Equal(t, m["CreatedAt"], user.CreatedAt.Format(time.RFC3339))
 }
 
 func TestMultipleOmit(t *testing.T) {
@@ -114,13 +166,9 @@ func TestAdd(t *testing.T) {
 }
 
 func TestAddIf(t *testing.T) {
-	m := New(user).AddIf(func(u interface{}) bool {
-		return false
-	}, "Foo", "Bar").Result()
+	m := New(user).AddIf(alwaysFalse, "Foo", "Bar").Result()
 	assert.NotContains(t, m, "Foo")
-	m = New(user).AddIf(func(u interface{}) bool {
-		return true
-	}, "Foo", "Bar").Result()
+	m = New(user).AddIf(alwaysTrue, "Foo", "Bar").Result()
 	assert.Contains(t, m, "Foo")
 	assert.Equal(t, "Bar", m["Foo"])
 }
@@ -134,43 +182,13 @@ func TestAddFunc(t *testing.T) {
 }
 
 func TestAddFuncIf(t *testing.T) {
-	m := New(user).AddFuncIf(func(u interface{}) bool {
-		return true
-	}, "Foo", func(u interface{}) interface{} {
+	m := New(user).AddFuncIf(alwaysTrue, "Foo", func(u interface{}) interface{} {
 		return "Bar"
 	}).Result()
 	assert.Contains(t, m, "Foo")
 	assert.Equal(t, m["Foo"], "Bar")
-	m = New(user).AddFuncIf(func(u interface{}) bool {
-		return false
-	}, "Foo", func(u interface{}) interface{} {
-		return "Bar"
-	}).Result()
+	m = New(user).AddFuncIf(alwaysFalse, "Foo", identity).Result()
 	assert.NotContains(t, m, "Foo")
-}
-
-func TestConvert(t *testing.T) {
-	m := New(user).Convert("FirstName", func(s interface{}) interface{} {
-		return strings.ToLower(s.(string))
-	}).Result()
-	assert.Contains(t, m, "FirstName")
-	assert.Equal(t, m["FirstName"], "foo")
-}
-
-func TestConvertIf(t *testing.T) {
-	m := New(user).ConvertIf(func(u interface{}) bool {
-		return true
-	}, "FirstName", func(s interface{}) interface{} {
-		return strings.ToLower(s.(string))
-	}).Result()
-	assert.Contains(t, m, "FirstName")
-	assert.Equal(t, m["FirstName"], "foo")
-	m = New(user).ConvertIf(func(u interface{}) bool {
-		return false
-	}, "FirstName", func(s interface{}) interface{} {
-		return strings.ToLower(s.(string))
-	}).Result()
-	assert.NotContains(t, m, "FirstName")
 }
 
 func TestTransformKeys(t *testing.T) {

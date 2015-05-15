@@ -10,28 +10,49 @@ import "github.com/tuvistavie/serializer"
 
 type User struct {
     ID        int
-    FirstName string
-    LastName  string
     Email     string
     HideEmail bool
+    FirstName string
+    LastName  string
     CreatedAt time.Time
     UpdatedAt time.Time
 }
 
-user := &User{"ID": 1, "FirstName": "Foo", "LastName": "Bar", "Email": "foo@example.org", "HideEmail": true}
+currentTime := time.Date(2015, 05, 13, 15, 30, 0, 0, time.UTC),
 
-serializer.New(user).
-           UseSnakeCase().
-           Pick("ID", "FirstName", "LastName", "Email").
-           OmitIf(func(u interface{}) bool {
-               return u.(User).HideEmail
-           }, "Email").
-           Add("CurrentTime", time.Now()).
-           AddFunc("FullName", func(u interface{}) interface{} {
-               return u.(User).FirstName + " " + u.(User).LastName
-           }).
-           Result()
-// -> {"id": 1, "first_name": "Foo", "last_name": "Bar", "current_time": time.Time{...}, "full_name": "Foo Bar"}
+user := User{
+    ID: 1, Email: "x@example.com", FirstName: "Foo", LastName:  "Bar",
+    HideEmail: true, CreatedAt: currentTime, UpdatedAt: currentTime,
+}
+userMap := serializer.New(user).
+              UseSnakeCase().
+              Pick("ID", "FirstName", "LastName", "Email").
+              PickFunc(func(t interface{}) interface{} {
+                  return t.(time.Time).Format(time.RFC3339)
+              }, "CreatedAt", "UpdatedAt").
+              OmitIf(func(u interface{}) bool {
+                  return u.(User).HideEmail
+              }, "Email").
+              Add("CurrentTime", time.Date(2015, 5, 15, 17, 41, 0, 0, time.UTC)).
+              AddFunc("FullName", func(u interface{}) interface{} {
+                  return u.(User).FirstName + " " + u.(User).LastName
+              }).Result()
+str, _ := json.MarshalIndent(userMap, "", "  ")
+fmt.Println(string(str))
+```
+
+will give:
+
+```json
+{
+  "created_at": "2015-05-13T15:30:00Z",
+  "current_time": "2015-05-15T17:41:00Z",
+  "first_name": "Foo",
+  "full_name": "Foo Bar",
+  "id": 1,
+  "last_name": "Bar",
+  "updated_at": "2015-05-13T15:30:00Z"
+}
 ```
 
 The full documentation is available at https://godoc.org/github.com/tuvistavie/serializer.

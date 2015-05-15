@@ -56,6 +56,12 @@ type Serializer interface {
 	// Add the given fields to the result if the Predicate returns true
 	PickIf(predicate Predicate, keys ...string) Serializer
 
+	// Add the given fields to the result after applying the converter
+	PickFunc(converter ValueConverter, keys ...string) Serializer
+
+	// Add the given fields to the result after applying the converter if the predicate returns true
+	PickFuncIf(predicate Predicate, converter ValueConverter, keys ...string) Serializer
+
 	// Omit the given fields from the result
 	Omit(keys ...string) Serializer
 
@@ -73,12 +79,6 @@ type Serializer interface {
 
 	// Add a computed custom field to the result if the Predicate returns true
 	AddFuncIf(predicate Predicate, key string, converter ValueConverter) Serializer
-
-	// Convert the field using the given converter
-	Convert(key string, converter ValueConverter) Serializer
-
-	// Convert the field using the given converter if the Predicate returns true
-	ConvertIf(predicate Predicate, key string, converter ValueConverter) Serializer
 }
 
 // A basic implementation of Serializer
@@ -177,6 +177,23 @@ func (b *Base) PickIf(p Predicate, keys ...string) Serializer {
 	return b
 }
 
+func (b *Base) PickFunc(converter ValueConverter, keys ...string) Serializer {
+	b.modifiers = append(b.modifiers, func(m jsonMap) jsonMap {
+		for _, key := range keys {
+			m[key] = converter(b.reflected.FieldByName(key).Interface())
+		}
+		return m
+	})
+	return b
+}
+
+func (b *Base) PickFuncIf(p Predicate, converter ValueConverter, keys ...string) Serializer {
+	if p(b.raw) {
+		return b.PickFunc(converter, keys...)
+	}
+	return b
+}
+
 func (b *Base) Omit(keys ...string) Serializer {
 	b.modifiers = append(b.modifiers, func(m jsonMap) jsonMap {
 		for _, key := range keys {
@@ -220,21 +237,6 @@ func (b *Base) AddFunc(key string, f ValueConverter) Serializer {
 func (b *Base) AddFuncIf(p Predicate, key string, f ValueConverter) Serializer {
 	if p(b.raw) {
 		return b.AddFunc(key, f)
-	}
-	return b
-}
-
-func (b *Base) Convert(key string, f ValueConverter) Serializer {
-	b.modifiers = append(b.modifiers, func(m jsonMap) jsonMap {
-		m[key] = f(b.reflected.FieldByName(key).Interface())
-		return m
-	})
-	return b
-}
-
-func (b *Base) ConvertIf(p Predicate, key string, f ValueConverter) Serializer {
-	if p(b.raw) {
-		return b.Convert(key, f)
 	}
 	return b
 }

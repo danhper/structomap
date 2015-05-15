@@ -1,3 +1,7 @@
+# 0.3.0 / 2015-05-15
+
+* Replace `Convert` by `PickFunc` and `ConvertIf` by `PickFuncIf`.
+
 # 0.2.1 / 2015-05-15
 
 * Add support for `snake_case` and `camelCase`
