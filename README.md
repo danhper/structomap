@@ -1,6 +1,6 @@
 # Go serializer [![Build Status](https://travis-ci.org/tuvistavie/serializer.svg)](https://travis-ci.org/tuvistavie/serializer) [![GoDoc](https://godoc.org/github.com/tuvistavie/serializer?status.svg)](https://godoc.org/github.com/tuvistavie/serializer)
 
-This package helps you to serialize your `struct` into `map` easily. It provides a `serializer.Serializer` interface implemented by the `serializer.Base` type which contains chainable function to add, remove or modify fields. The `struct` is trasnformed to a `map[string]interface{}` using the `Transform(entity interface{})` method.
+This package helps you to serialize your `struct` into `map` easily. It provides a `serializer.Serializer` interface implemented by the `serializer.Base` type which contains chainable function to add, remove or modify fields. The `struct` is transformed to a `map[string]interface{}` using the `Transform(entity interface{})` method.
 It is then up to you to encode the result in JSON, XML or whatever you like.
 
 Here is an example.
