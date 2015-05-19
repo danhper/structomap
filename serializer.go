@@ -8,18 +8,26 @@ import (
 	"reflect"
 )
 
+// KeyCase represenets the word case of the output keys
 type KeyCase int
 
 const (
-	NotSet     KeyCase = iota
-	CamelCase          = iota
-	PascalCase         = iota
-	SnakeCase          = iota
+	// NotSet uses the original case for keys
+	NotSet KeyCase = iota
+
+	// CamelCase uses camelCase keys
+	CamelCase = iota
+
+	// PascalCase Uses PascalCase keys
+	PascalCase = iota
+
+	// SnakeCase uses snake_case keys
+	SnakeCase = iota
 )
 
-var defaultCase KeyCase = NotSet
+var defaultCase = NotSet
 
-// Set the default key case (snake_case, camelCase or PascalCase) for
+// SetDefaultCase set the default key case (snake_case, camelCase or PascalCase) for
 // all new serializers
 func SetDefaultCase(caseType KeyCase) {
 	defaultCase = caseType
@@ -28,65 +36,35 @@ func SetDefaultCase(caseType KeyCase) {
 type mapModifier func(jsonMap) jsonMap
 
 type jsonMap map[string]interface{}
+
+// Predicate is an alias for func(interface{}) bool used to test for inclusion
 type Predicate func(interface{}) bool
+
+// KeyConverter is an alias for func(string) string used to transform keys
 type KeyConverter func(string) string
+
+// ValueConverter is an alias for func(interface{}) interface{} used to transform values
 type ValueConverter func(interface{}) interface{}
 
+// Serializer is the base interface containing all serialization methods
 type Serializer interface {
-	// Transform the entity into a map[string]interface{} ready to be serialized
 	Transform(entity interface{}) map[string]interface{}
-
-	// Transform the entities into a []map[string]interface{} array ready to be serialized
-	// entities must be a slice or an array
 	TransformArray(entities interface{}) ([]map[string]interface{}, error)
-
-	// Transform the entities into a []map[string]interface{} array ready to be serialized
-	// Panics if entities is not a slice or an array
 	MustTransformArray(entities interface{}) []map[string]interface{}
-
-	// Convert all the keys using the given converter
 	ConvertKeys(keyConverter KeyConverter) Serializer
-
-	// Use snake_case keys
 	UseSnakeCase() Serializer
-
-	// Use camelCase keys
 	UseCamelCase() Serializer
-
-	// Use PascalCase keys
 	UsePascalCase() Serializer
-
-	// Add all the exported fields to the result
 	PickAll() Serializer
-
-	// Add the given fields to the result
 	Pick(keys ...string) Serializer
-
-	// Add the given fields to the result if the Predicate returns true
 	PickIf(predicate Predicate, keys ...string) Serializer
-
-	// Add the given fields to the result after applying the converter
 	PickFunc(converter ValueConverter, keys ...string) Serializer
-
-	// Add the given fields to the result after applying the converter if the predicate returns true
 	PickFuncIf(predicate Predicate, converter ValueConverter, keys ...string) Serializer
-
-	// Omit the given fields from the result
 	Omit(keys ...string) Serializer
-
-	// Omit the given fields from the result if the Predicate returns true
 	OmitIf(predicate Predicate, keys ...string) Serializer
-
-	// Add a custom field to the result
 	Add(key string, value interface{}) Serializer
-
-	// Add a custom field to the result if the Predicate returns true
 	AddIf(predicate Predicate, key string, value interface{}) Serializer
-
-	// Add a computed custom field to the result
 	AddFunc(key string, converter ValueConverter) Serializer
-
-	// Add a computed custom field to the result if the Predicate returns true
 	AddFuncIf(predicate Predicate, key string, converter ValueConverter) Serializer
 }
 
@@ -102,7 +80,7 @@ func identity(u interface{}) interface{} {
 	return u
 }
 
-// A basic implementation of Serializer
+// Base is a basic implementation of Serializer
 type Base struct {
 	raw          interface{}
 	modifiers    []mapModifier
@@ -110,19 +88,22 @@ type Base struct {
 	keyConverter KeyConverter
 }
 
-// Creates a new serializer
+// New creates a new serializer
 func New() *Base {
 	b := &Base{}
 	b.addDefaultKeyConverter()
 	return b
 }
 
+// Transform transforms the entity into a map[string]interface{} ready to be serialized
 func (b *Base) Transform(entity interface{}) map[string]interface{} {
 	b.raw = entity
 	b.reflected = reflect.Indirect(reflect.ValueOf(entity))
 	return b.result()
 }
 
+// TransformArray transforms the entities into a []map[string]interface{} array
+// ready to be serialized. Entities must be a slice or an array
 func (b *Base) TransformArray(entities interface{}) ([]map[string]interface{}, error) {
 	s := reflect.ValueOf(entities)
 	if s.Kind() != reflect.Slice && s.Kind() != reflect.Array {
@@ -135,6 +116,8 @@ func (b *Base) TransformArray(entities interface{}) ([]map[string]interface{}, e
 	return result, nil
 }
 
+// MustTransformArray transforms the entities into a []map[string]interface{}
+// array ready to be serialized. Panics if entities is not a slice or an array
 func (b *Base) MustTransformArray(entities interface{}) []map[string]interface{} {
 	res, err := b.TransformArray(entities)
 	if err != nil {
@@ -171,32 +154,36 @@ func (b *Base) result() map[string]interface{} {
 	}
 	if b.keyConverter != nil {
 		return b.transformedResult(result)
-	} else {
-		return result
 	}
+	return result
 }
 
+// ConvertKeys converts all the keys using the given converter
 func (b *Base) ConvertKeys(keyConverter KeyConverter) Serializer {
 	b.keyConverter = keyConverter
 	return b
 }
 
+// UsePascalCase uses PascalCase keys for the serializer
 func (b *Base) UsePascalCase() Serializer {
 	return b.ConvertKeys(func(k string) string {
 		return xstrings.ToCamelCase(k)
 	})
 }
 
+// UseCamelCase uses camelCase keys for the serializer
 func (b *Base) UseCamelCase() Serializer {
 	return b.ConvertKeys(func(k string) string {
 		return xstrings.FirstRuneToLower(xstrings.ToCamelCase(xstrings.ToSnakeCase(k)))
 	})
 }
 
+// UseSnakeCase uses snake_case keys for the serializer
 func (b *Base) UseSnakeCase() Serializer {
 	return b.ConvertKeys(xstrings.ToSnakeCase)
 }
 
+// PickAll adds all the exported fields to the result
 func (b *Base) PickAll() Serializer {
 	b.modifiers = append(b.modifiers, func(m jsonMap) jsonMap {
 		return structs.Map(b.raw)
@@ -204,18 +191,22 @@ func (b *Base) PickAll() Serializer {
 	return b
 }
 
+// Pick adds the given fields to the result
 func (b *Base) Pick(keys ...string) Serializer {
 	return b.PickFunc(identity, keys...)
 }
 
+// PickIf adds the given fields to the result if the Predicate returns true
 func (b *Base) PickIf(p Predicate, keys ...string) Serializer {
 	return b.PickFuncIf(p, identity, keys...)
 }
 
+// PickFunc adds the given fields to the result after applying the converter
 func (b *Base) PickFunc(converter ValueConverter, keys ...string) Serializer {
 	return b.PickFuncIf(alwaysTrue, converter, keys...)
 }
 
+// PickFuncIf adds the given fields to the result after applying the converter if the predicate returns true
 func (b *Base) PickFuncIf(p Predicate, converter ValueConverter, keys ...string) Serializer {
 	b.modifiers = append(b.modifiers, func(m jsonMap) jsonMap {
 		if p(b.raw) {
@@ -228,10 +219,12 @@ func (b *Base) PickFuncIf(p Predicate, converter ValueConverter, keys ...string)
 	return b
 }
 
+// Omit omits the given fields from the result
 func (b *Base) Omit(keys ...string) Serializer {
 	return b.OmitIf(alwaysTrue, keys...)
 }
 
+// OmitIf omits the given fields from the result if the Predicate returns true
 func (b *Base) OmitIf(p Predicate, keys ...string) Serializer {
 	b.modifiers = append(b.modifiers, func(m jsonMap) jsonMap {
 		if p(b.raw) {
@@ -244,18 +237,22 @@ func (b *Base) OmitIf(p Predicate, keys ...string) Serializer {
 	return b
 }
 
+// Add adds a custom field to the result
 func (b *Base) Add(key string, value interface{}) Serializer {
 	return b.AddIf(alwaysTrue, key, value)
 }
 
+// AddIf adds a custom field to the result if the Predicate returns true
 func (b *Base) AddIf(p Predicate, key string, value interface{}) Serializer {
 	return b.AddFuncIf(p, key, func(m interface{}) interface{} { return value })
 }
 
+// AddFunc adds a computed custom field to the result
 func (b *Base) AddFunc(key string, f ValueConverter) Serializer {
 	return b.AddFuncIf(alwaysTrue, key, f)
 }
 
+// AddFuncIf adds a computed custom field to the result if the Predicate returns true
 func (b *Base) AddFuncIf(p Predicate, key string, f ValueConverter) Serializer {
 	b.modifiers = append(b.modifiers, func(m jsonMap) jsonMap {
 		if p(b.raw) {
