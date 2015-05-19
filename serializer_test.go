@@ -39,6 +39,8 @@ func (c *CustomSerializer) WithPrivateinfo() *CustomSerializer {
 	return c
 }
 
+var createdAt = time.Date(2015, 05, 13, 15, 30, 0, 0, time.UTC)
+
 var user = User{
 	ID:        1,
 	Email:     "x@example.com",
@@ -48,25 +50,26 @@ var user = User{
 	LastName:  "Bar",
 	HideEmail: true,
 	HideName:  true,
-	CreatedAt: time.Date(2015, 05, 13, 15, 30, 0, 0, time.UTC),
-	UpdatedAt: time.Date(2015, 05, 13, 15, 30, 0, 0, time.UTC),
+	CreatedAt: createdAt,
+	UpdatedAt: createdAt,
 }
 
+var exampleSerializer = New().
+	UseSnakeCase().
+	Pick("ID", "FirstName", "LastName", "Email").
+	PickFunc(func(t interface{}) interface{} {
+	return t.(time.Time).Format(time.RFC3339)
+}, "CreatedAt", "UpdatedAt").
+	OmitIf(func(u interface{}) bool {
+	return u.(User).HideEmail
+}, "Email").
+	Add("CurrentTime", time.Date(2015, 5, 15, 17, 41, 0, 0, time.UTC)).
+	AddFunc("FullName", func(u interface{}) interface{} {
+	return u.(User).FirstName + " " + u.(User).LastName
+})
+
 func ExampleSerializer() {
-	userSerializer := New().
-		UseSnakeCase().
-		Pick("ID", "FirstName", "LastName", "Email").
-		PickFunc(func(t interface{}) interface{} {
-		return t.(time.Time).Format(time.RFC3339)
-	}, "CreatedAt", "UpdatedAt").
-		OmitIf(func(u interface{}) bool {
-		return u.(User).HideEmail
-	}, "Email").
-		Add("CurrentTime", time.Date(2015, 5, 15, 17, 41, 0, 0, time.UTC)).
-		AddFunc("FullName", func(u interface{}) interface{} {
-		return u.(User).FirstName + " " + u.(User).LastName
-	})
-	userMap := userSerializer.Transform(user)
+	userMap := exampleSerializer.Transform(user)
 	str, _ := json.MarshalIndent(userMap, "", "  ")
 	fmt.Println(string(str))
 	// Output:
@@ -79,6 +82,36 @@ func ExampleSerializer() {
 	//   "last_name": "Bar",
 	//   "updated_at": "2015-05-13T15:30:00Z"
 	// }
+}
+
+func ExampleArraySerializer() {
+	otherUser := User{ID: 2, FirstName: "Ping", LastName: "Pong", CreatedAt: createdAt, UpdatedAt: createdAt}
+	users := []User{user, otherUser}
+	usersArrayMap, _ := exampleSerializer.TransformArray(users)
+	str, _ := json.MarshalIndent(usersArrayMap, "", "  ")
+	fmt.Println(string(str))
+	// Output:
+	// [
+	//   {
+	//     "created_at": "2015-05-13T15:30:00Z",
+	//     "current_time": "2015-05-15T17:41:00Z",
+	//     "first_name": "Foo",
+	//     "full_name": "Foo Bar",
+	//     "id": 1,
+	//     "last_name": "Bar",
+	//     "updated_at": "2015-05-13T15:30:00Z"
+	//   },
+	//   {
+	//     "created_at": "2015-05-13T15:30:00Z",
+	//     "current_time": "2015-05-15T17:41:00Z",
+	//     "email": "",
+	//     "first_name": "Ping",
+	//     "full_name": "Ping Pong",
+	//     "id": 2,
+	//     "last_name": "Pong",
+	//     "updated_at": "2015-05-13T15:30:00Z"
+	//   }
+	// ]
 }
 
 func TestPickAll(t *testing.T) {
@@ -221,13 +254,27 @@ func TestDefaultCase(t *testing.T) {
 	assert.Contains(t, m, "FirstName")
 }
 
-func TestTranformArray(t *testing.T) {
+func TestTransformArray(t *testing.T) {
 	otherUser := User{ID: 8, FirstName: "Me"}
-	users := []interface{}{user, otherUser}
-	arr := New().Pick("ID", "FirstName").TransformArray(users)
-	assert.Len(t, arr, 2)
-	assert.Equal(t, arr[0]["ID"], user.ID)
-	assert.Equal(t, arr[1]["ID"], otherUser.ID)
+	ser := New().UseSnakeCase().Pick("ID", "FirstName")
+	cases := []interface{}{[]User{user, otherUser}, [2]User{user, otherUser}}
+	for _, c := range cases {
+		arr, err := ser.TransformArray(c)
+		assert.Nil(t, err)
+		assert.Len(t, arr, 2)
+		assert.Equal(t, arr[0]["id"], user.ID)
+		assert.Equal(t, arr[1]["id"], otherUser.ID)
+		assert.Equal(t, arr[0]["first_name"], user.FirstName)
+	}
+	_, err := ser.TransformArray(1)
+	assert.NotNil(t, err)
+}
+
+func TestMustTransformArray(t *testing.T) {
+	ser := New().UseSnakeCase().Pick("ID", "FirstName")
+	users := []User{user, User{ID: 8, FirstName: "Me"}}
+	assert.Len(t, ser.MustTransformArray(users), 2)
+	assert.Panics(t, func() { ser.MustTransformArray(1) })
 }
 
 func TestCustomSerializer(t *testing.T) {

@@ -2,6 +2,7 @@
 package serializer
 
 import (
+	"fmt"
 	"github.com/fatih/structs"
 	"github.com/huandu/xstrings"
 	"reflect"
@@ -35,8 +36,13 @@ type Serializer interface {
 	// Transform the entity into a map[string]interface{} ready to be serialized
 	Transform(entity interface{}) map[string]interface{}
 
-	// Transform the entities into a map[string]interface{} array ready to be serialized
-	TransformArray(entities []interface{}) []map[string]interface{}
+	// Transform the entities into a []map[string]interface{} array ready to be serialized
+	// entities must be a slice or an array
+	TransformArray(entities interface{}) ([]map[string]interface{}, error)
+
+	// Transform the entities into a []map[string]interface{} array ready to be serialized
+	// Panics if entities is not a slice or an array
+	MustTransformArray(entities interface{}) []map[string]interface{}
 
 	// Convert all the keys using the given converter
 	ConvertKeys(keyConverter KeyConverter) Serializer
@@ -117,12 +123,24 @@ func (b *Base) Transform(entity interface{}) map[string]interface{} {
 	return b.result()
 }
 
-func (b *Base) TransformArray(entities []interface{}) []map[string]interface{} {
-	var result []map[string]interface{}
-	for _, entity := range entities {
-		result = append(result, b.Transform(entity))
+func (b *Base) TransformArray(entities interface{}) ([]map[string]interface{}, error) {
+	s := reflect.ValueOf(entities)
+	if s.Kind() != reflect.Slice && s.Kind() != reflect.Array {
+		return nil, fmt.Errorf("TransformArray() given a non-slice type")
 	}
-	return result
+	var result []map[string]interface{}
+	for i := 0; i < s.Len(); i++ {
+		result = append(result, b.Transform(s.Index(i).Interface()))
+	}
+	return result, nil
+}
+
+func (b *Base) MustTransformArray(entities interface{}) []map[string]interface{} {
+	res, err := b.TransformArray(entities)
+	if err != nil {
+		panic(err)
+	}
+	return res
 }
 
 func (b *Base) addDefaultKeyConverter() {

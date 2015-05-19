@@ -1,3 +1,8 @@
+# 0.5.0 / 2015-05-19
+
+* Change `TransformArray` to accept `interface{}` instead of `[]interface{}`
+* Add `MustTransformArray`, panicking version of `TransformArray`
+
 # 0.4.0 / 2015-05-15
 
 * Change `Result` method to `Transform` method.

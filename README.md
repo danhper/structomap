@@ -57,7 +57,49 @@ will give:
 }
 ```
 
-The full documentation is available at https://godoc.org/github.com/tuvistavie/serializer.
+
+## Working with slices and arrays
+
+You can also use a serializer to transform slices and arrays, it will be applied to
+all elements. The only thing to do is to call `TransformArray(entities)` on a slice or an array. As `TransformArray` expects an `interface{}`, but in fact
+really wants a slice or an array, a second `error` argument is returned. If you do not want it, you can use `MustTransformArray`, which will panic instead of returning an error.
+
+Here in an example reusing the above serializer.
+
+```go
+otherUser := User{ID: 2, FirstName: "Ping", LastName: "Pong", CreatedAt: createdAt, UpdatedAt: createdAt}
+users := []User{user, otherUser}
+result, _ := userSerializer.TransformArray(users)
+str, _ := json.MarshalIndent(result, "", "  ")
+fmt.Println(string(str))
+```
+
+This will give:
+
+```json
+[
+  {
+    "created_at": "2015-05-13T15:30:00Z",
+    "current_time": "2015-05-15T17:41:00Z",
+    "first_name": "Foo",
+    "full_name": "Foo Bar",
+    "id": 1,
+    "last_name": "Bar",
+    "updated_at": "2015-05-13T15:30:00Z"
+  },
+  {
+    "created_at": "2015-05-13T15:30:00Z",
+    "current_time": "2015-05-15T17:41:00Z",
+    "email": "",
+    "first_name": "Ping",
+    "full_name": "Ping Pong",
+    "id": 2,
+    "last_name": "Pong",
+    "updated_at": "2015-05-13T15:30:00Z"
+  }
+]
+```
+
 
 ## Choosing a key format
 
@@ -94,3 +136,7 @@ even when ignoring `u.Pick` return value.
 ## License
 
 This is released under the MIT license. See the [LICENSE](./LICENSE) file for more information.
+
+## Godoc
+
+The full documentation is available at https://godoc.org/github.com/tuvistavie/serializer.
