@@ -1,4 +1,4 @@
-package serializer
+package structomap
 
 import (
 	"encoding/json"

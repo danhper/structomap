@@ -1,5 +1,5 @@
-// Package serializer contains
-package serializer
+// Package structomap contains
+package structomap
 
 import (
 	"fmt"

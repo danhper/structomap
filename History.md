@@ -1,3 +1,7 @@
+# 0.6.0 / 2015-05-21
+
+* Rename package to structomap
+
 # 0.5.0 / 2015-05-19
 
 * Change `TransformArray` to accept `interface{}` instead of `[]interface{}`
