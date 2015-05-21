@@ -1,12 +1,12 @@
-# Go serializer [![Build Status](https://travis-ci.org/tuvistavie/serializer.svg)](https://travis-ci.org/tuvistavie/serializer) [![Coverage Status](https://coveralls.io/repos/tuvistavie/serializer/badge.svg?branch=master)](https://coveralls.io/r/tuvistavie/serializer?branch=master) [![GoDoc](https://godoc.org/github.com/tuvistavie/serializer?status.svg)](https://godoc.org/github.com/tuvistavie/serializer)
+# structomap [![Build Status](https://travis-ci.org/tuvistavie/structomap.svg)](https://travis-ci.org/tuvistavie/structomap) [![Coverage Status](https://coveralls.io/repos/tuvistavie/structomap/badge.svg?branch=master)](https://coveralls.io/r/tuvistavie/structomap?branch=master) [![GoDoc](https://godoc.org/github.com/tuvistavie/structomap?status.svg)](https://godoc.org/github.com/tuvistavie/structomap)
 
-This package helps you to transform your `struct` into `map` easily. It provides a `serializer.Serializer` interface implemented by the `serializer.Base` type which contains chainable function to add, remove or modify fields. The `struct` is transformed to a `map[string]interface{}` using the `Transform(entity interface{})` method.
+This package helps you to transform your `struct` into `map` easily. It provides a `structomap.Serializer` interface implemented by the `structomap.Base` type which contains chainable function to add, remove or modify fields. The `struct` is transformed to a `map[string]interface{}` using the `Transform(entity interface{})` method.
 It is then up to you to encode the result in JSON, XML or whatever you like.
 
 Here is an example.
 
 ```go
-import "github.com/tuvistavie/serializer"
+import "github.com/tuvistavie/structomap"
 
 type User struct {
     ID        int
@@ -24,7 +24,7 @@ user := User{
     ID: 1, Email: "x@example.com", FirstName: "Foo", LastName:  "Bar",
     HideEmail: true, CreatedAt: currentTime, UpdatedAt: currentTime,
 }
-userSerializer := serializer.New().
+userSerializer := structomap.New().
               UseSnakeCase().
               Pick("ID", "FirstName", "LastName", "Email").
               PickFunc(func(t interface{}) interface{} {
@@ -60,7 +60,7 @@ will give:
 
 ## Working with slices and arrays
 
-You can also use a serializer to transform slices and arrays, it will be applied to
+You can also use structomap to transform slices and arrays, it will be applied to
 all elements. The only thing to do is to call `TransformArray(entities)` on a slice or an array. As `TransformArray` expects an `interface{}`, but in fact
 really wants a slice or an array, a second `error` argument is returned. If you do not want it, you can use `MustTransformArray`, which will panic instead of returning an error.
 
@@ -105,19 +105,19 @@ This will give:
 
 You can set the key format for the output map using `UseSnakeCase()`, `UsePascalCase()` or `UseCamelCase()` on the serializer object.
 You can also set the default case for all new serializers by using
-`serializer.SetDefaultCase(serializer.SnakeCase)` (`serializer.CamelCase` and `serializer.PascalCase` are also available). The `init()` function would be a good place to set this.
+`structomap.SetDefaultCase(structomap.SnakeCase)` (`structomap.CamelCase` and `structomap.PascalCase` are also available). The `init()` function would be a good place to set this.
 
 ## Building your own serializer
 
-With `Serializer` as a base, you can easily build your serializer.
+With `structomap.Base` as a base, you can easily build your serializer.
 
 ```go
 type UserSerializer struct {
-  *serializer.Base
+  *structomap.Base
 }
 
 func NewUserSerializer() *UserSerializer {
-  u := &UserSerializer{serializer.New()}
+  u := &UserSerializer{structomap.New()}
   u.Pick("ID", "CreatedAt", "UpdatedAt", "DeletedAt")
   return u
 }
@@ -139,4 +139,4 @@ This is released under the MIT license. See the [LICENSE](./LICENSE) file for mo
 
 ## Godoc
 
-The full documentation is available at https://godoc.org/github.com/tuvistavie/serializer.
+The full documentation is available at https://godoc.org/github.com/tuvistavie/structomap.
