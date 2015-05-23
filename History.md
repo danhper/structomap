@@ -1,3 +1,7 @@
+# 0.6.1 / 2015-05-23
+
+* Fix `TransformArray` bug with empty arrays
+
 # 0.6.0 / 2015-05-21
 
 * Rename package to structomap

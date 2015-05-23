@@ -109,7 +109,7 @@ func (b *Base) TransformArray(entities interface{}) ([]map[string]interface{}, e
 	if s.Kind() != reflect.Slice && s.Kind() != reflect.Array {
 		return nil, fmt.Errorf("TransformArray() given a non-slice type")
 	}
-	var result []map[string]interface{}
+	result := []map[string]interface{}{}
 	for i := 0; i < s.Len(); i++ {
 		result = append(result, b.Transform(s.Index(i).Interface()))
 	}

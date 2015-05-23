@@ -277,6 +277,15 @@ func TestMustTransformArray(t *testing.T) {
 	assert.Panics(t, func() { ser.MustTransformArray(1) })
 }
 
+func TestTransformEmptyArray(t *testing.T) {
+	ser := New().UseSnakeCase().Pick("ID", "FirstName")
+	users := []User{}
+	result := ser.MustTransformArray(users)
+	assert.NotNil(t, result)
+	assert.IsType(t, []map[string]interface{}{}, result)
+	assert.Len(t, result, 0)
+}
+
 func TestCustomSerializer(t *testing.T) {
 	m := NewCustomSerializer().WithPrivateinfo().WithBasicInfo().Transform(user)
 	for _, field := range []string{"ID", "FirstName", "LastName", "Email"} {
