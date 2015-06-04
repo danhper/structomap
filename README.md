@@ -18,7 +18,7 @@ type User struct {
     UpdatedAt time.Time
 }
 
-currentTime := time.Date(2015, 05, 13, 15, 30, 0, 0, time.UTC),
+currentTime := time.Date(2015, 05, 13, 15, 30, 0, 0, time.UTC)
 
 user := User{
     ID: 1, Email: "x@example.com", FirstName: "Foo", LastName:  "Bar",
