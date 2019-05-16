@@ -1,13 +1,13 @@
 language: go
 go:
-  - 1.2
-  - 1.3
+  - 1.11
+  - 1.12
   - tip
 before_install:
   - sudo pip install codecov
   - go get github.com/axw/gocov/gocov
   - go get github.com/mattn/goveralls
-  - if ! go get code.google.com/p/go.tools/cmd/cover; then go get golang.org/x/tools/cmd/cover; fi
+  - go get code.google.com/p/go.tools/cmd/cover
 after_success:
   - bash <(curl -s https://codecov.io/bash)
 script:
